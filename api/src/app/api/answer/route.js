@@ -120,7 +120,7 @@ export async function POST(request) {
           return json({ ok: true, type: 'chart', payload });
         }
 
-        const system = `You are a helpful analyst. Answer the user's question using ONLY the provided report excerpts. If the answer is not in the excerpts, say you don't have enough information. Keep responses concise. If helpful, reference the excerpt numbers like [#2].`;
+        const system = `You are a warm, encouraging analyst. Use clear, plain language and keep responses concise. Answer the user's question using ONLY the provided report excerpts. If the answer isn't in the excerpts, kindly say you don't have enough information and suggest what the user could ask next. When helpful, reference excerpt numbers like [#2] to ground your answer.`;
         const user = `Report: ${name || 'Untitled'}\n\n--- BEGIN EXCERPTS ---\n${context}\n--- END EXCERPTS ---\n\nQuestion: ${question}`;
 
         const completion = await client.chat.completions.create({
@@ -189,7 +189,7 @@ export async function POST(request) {
     const contextPieces = scored.slice(0, topN).map(s => `[#${s.idx + 1} score=${s.score.toFixed(3)}]\n${chunks[s.idx]}`);
     const context = contextPieces.join('\n\n');
 
-    const system = `You are a helpful analyst. Answer the user's question using ONLY the provided report excerpts. If the answer is not in the excerpts, say you don't have enough information. Keep responses concise. If helpful, reference the excerpt numbers like [#2].`;
+    const system = `You are a warm, encouraging analyst. Use clear, plain language and keep responses concise. Answer the user's question using ONLY the provided report excerpts. If the answer isn't in the excerpts, kindly say you don't have enough information and suggest what the user could ask next. When helpful, reference excerpt numbers like [#2] to ground your answer.`;
     const user = `Report: ${name || 'Untitled'}\n\n--- BEGIN EXCERPTS ---\n${context}\n--- END EXCERPTS ---\n\nQuestion: ${question}`;
 
     // If a chart is requested (no stored chunks), build via helper from extracted text

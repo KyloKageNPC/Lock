@@ -1,6 +1,7 @@
 import React from 'react'
 import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import ChatInterface from './components/ChatInterface.jsx'
+import ChartViewer from './components/ChartViewer.jsx'
 import AdminReportsPage from './components/AdminReportsPage.jsx'
 import UserReportsPage from './components/UserReportsPage.jsx'
 import Breadcrumbs from './components/Breadcrumbs.jsx'
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/" element={<AuthRoute isAuthed={isAuthed}><ChatInterface /></AuthRoute>} />
         <Route path="/chat/:reportId" element={<AuthRoute isAuthed={isAuthed}><ChatInterface /></AuthRoute>} />
+        <Route path="/chart/local" element={<AuthRoute isAuthed={isAuthed}><ChartViewer /></AuthRoute>} />
         <Route path="/reports" element={<AuthRoute isAuthed={isAuthed}><UserReportsPage /></AuthRoute>} />
         <Route path="/admin" element={<AdminRoute role={role}><AdminReportsPage /></AdminRoute>} />
       </Routes>

@@ -115,7 +115,7 @@ export default function ChatInterface() {
     {
       id: 1,
       type: 'assistant',
-      content: "Hello! I'm your AI assistant. How can I help you today?",
+      content: "Hi there! I'm your friendly AI companion. I can help explore and explain this report, highlight key points, and suggest questions to dig deeper. What would you like to know?",
       timestamp: new Date()
     }
   ]);
@@ -367,12 +367,18 @@ export default function ChatInterface() {
         });
         const data = await res.json();
             if (res.ok && data?.type === 'chart' && data?.payload) {
+              const payload = data.payload;
               assistantMessage = {
                 id: messages.length + 2,
                 type: 'chart',
-                content: data.payload,
+                content: payload,
                 timestamp: new Date()
               };
+              try {
+                const localKey = makeLocalChartKey(currentThreadId, assistantMessage.id);
+                localStorage.setItem(localKey, JSON.stringify(payload));
+                assistantMessage.localChartKey = localKey;
+              } catch {}
             } else {
               answerText = data?.answer ? data.answer : (data?.error ? `Error: ${data.error}` : answerText);
             }
@@ -391,6 +397,11 @@ export default function ChatInterface() {
             const parsed = JSON.parse(trimmed);
             if (parsed && parsed.kind && parsed.data) {
               assistantMessage = { id: assistantMessage.id, type: 'chart', content: parsed, timestamp: assistantMessage.timestamp };
+              try {
+                const localKey = makeLocalChartKey(currentThreadId, assistantMessage.id);
+                localStorage.setItem(localKey, JSON.stringify(parsed));
+                assistantMessage.localChartKey = localKey;
+              } catch {}
             }
           }
         } catch {}
@@ -409,7 +420,7 @@ export default function ChatInterface() {
       let assistantMessage = {
         id: messages.length + 2,
         type: 'assistant',
-        content: 'Failed to fetch answer. Please try again.',
+        content: 'Hmm, I couldn’t fetch an answer just now. Mind trying again in a moment, or ask a simpler follow-up?',
         timestamp: new Date()
       };
       setMessages(prev => {
@@ -426,6 +437,15 @@ export default function ChatInterface() {
       setIsTyping(false);
     }
   };
+
+  function makeLocalChartKey(threadId, messageId) {
+    return `chart_payload_${reportId || 'global'}_${threadId || 't'}_${messageId || 'm'}`;
+  }
+
+  function buildChartLink(message) {
+    const key = message.localChartKey || makeLocalChartKey(currentThreadId, message.id);
+    return `/chart/local?key=${encodeURIComponent(key)}`;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#1a1a1a] text-white">
@@ -512,7 +532,11 @@ export default function ChatInterface() {
                           <div className="text-sm">{t.title || 'Chat'}</div>
                         )}
                         <div className="text-xs text-gray-500 truncate">
-                          {(t.messages && t.messages.length) ? t.messages[t.messages.length - 1].content.slice(0, 40) : new Date(t.createdAt).toLocaleDateString()}
+                          {(t.messages && t.messages.length) ? (
+                            typeof t.messages[t.messages.length - 1].content === 'string'
+                              ? t.messages[t.messages.length - 1].content.slice(0, 40)
+                              : '[Chart]'
+                          ) : new Date(t.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                     </button>
@@ -558,7 +582,12 @@ export default function ChatInterface() {
 
                 <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${message.type === 'assistant' ? 'bg-[#2a2a2a] text-white' : 'bg-[#00A67E] text-white'}`}>
                   {message.type === 'chart' ? (
-                    <ChartMessage payload={message.content} />
+                    <>
+                      <ChartMessage payload={message.content} />
+                      <div className="mt-2 text-xs">
+                        <a href={buildChartLink(message)} target="_blank" rel="noreferrer" className="text-[#00A67E] hover:underline">Open chart in new tab</a>
+                      </div>
+                    </>
                   ) : (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">
                       {message.content}
