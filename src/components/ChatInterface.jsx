@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
-import { Send, Bot, User, MessageSquare, Trash2, X, FileText, Pencil } from 'lucide-react';
+import { Send, Bot, User, MessageSquare, Trash2, X, FileText, Pencil, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ChartMessage from './ChartMessage';
 
@@ -18,6 +18,7 @@ export default function ChatInterface() {
   const [clientId, setClientId] = useState(null);
   const [renamingThreadId, setRenamingThreadId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const [figures, setFigures] = useState([]);
 
   // Load report name if landing directly via URL
   useEffect(() => {
@@ -41,6 +42,19 @@ export default function ChatInterface() {
       }
     };
     loadDetails();
+    // Load figures list (skip until reportId is known to avoid bad UUID)
+    const loadFigures = async () => {
+      if (!reportId) return;
+      try {
+        const res = await fetch(`/api/reports/${encodeURIComponent(reportId)}/figures`);
+        const j = await res.json();
+        if (res.ok && Array.isArray(j.figures)) setFigures(j.figures);
+        else setFigures([]);
+      } catch {
+        setFigures([]);
+      }
+    };
+    loadFigures();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId]);
 
@@ -123,6 +137,7 @@ export default function ChatInterface() {
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const saveThreads = (nextThreads) => {
     const key = `chat_threads_${reportId}`;
@@ -447,6 +462,15 @@ export default function ChatInterface() {
     return `/chart/local?key=${encodeURIComponent(key)}`;
   }
 
+  function truncate(str, n) {
+    try {
+      const s = String(str || '');
+      return s.length > n ? s.slice(0, n - 1) + '…' : s;
+    } catch {
+      return str;
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-[#1a1a1a] text-white">
       <div className="bg-[#0a0a0a] border-b border-gray-800 px-6 py-4">
@@ -489,6 +513,34 @@ export default function ChatInterface() {
                   New Chat
                 </button>
               </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-400">
+              {figures?.length ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>{figures.length} figure{figures.length>1?'s':''} available:</span>
+                  {figures.slice(0,6).map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        const cap = f.caption ? `: ${f.caption}` : '';
+                        const prompt = `Show me Figure ${f.figure_num}${cap}.`;
+                        setInputMessage(prompt);
+                        // Focus the input so pressing Enter will submit immediately
+                        try { inputRef.current?.focus(); } catch {}
+                      }}
+                      className="px-2 py-1 rounded bg-[#1f1f1f] border border-gray-800 hover:border-[#00A67E] hover:text-[#00A67E] transition-colors flex items-center gap-1"
+                      title={f.caption ? f.caption : `Figure ${f.figure_num}`}
+                    >
+                      <Plus className="w-3 h-3 opacity-70" />
+                      {`Figure ${f.figure_num}${f.caption ? ': ' + truncate(f.caption, 24) : ''}`}
+                    </button>
+                  ))}
+                  {figures.length>6 && <span className="opacity-70">+{figures.length-6} more</span>}
+                </div>
+              ) : (
+                <span>No figures found for this report.</span>
+              )}
             </div>
           </div>
         )}
@@ -625,6 +677,7 @@ export default function ChatInterface() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Type your message..."
+                ref={inputRef}
                 className="flex-1 bg-[#2a2a2a] text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#00A67E] placeholder-gray-500"
               />
               <button

@@ -8,3 +8,9 @@
 - Runtime/perf: Stream answers, cache question embeddings per thread, cap max tokens, prefetch top chunks, and add request timeouts/backoff.
 - Charts: Switch to function-calling to request structured chart specs from the model, then validate on the server before rendering.
 - Observability: Centralize logs, add request IDs, metrics, and error surfacing in API responses; write health checks beyond `route.js`.
+
+- Figures: Extract figures from report PDFs/DOCX during indexing; capture caption, figure number, page, and source span.
+- Storage: Create `report_figures` with `report_id`, `figure_num`, `title/caption`, `page`, `mime/url`, `chunk_span`, and `created_at`.
+- API: Add `/api/reports/[reportId]/figures` to list figures and `/api/reports/[reportId]/figures/[figureNum]` to fetch a specific figure with metadata.
+- Messaging: If a report has no figures, show a friendly notice at chat start and on figure-related queries ("No figures found for this report.").
+- UX: On entering a report chat, display available figure cards and a count (e.g., "3 figures available"); enable prompts like "Show me Figure 2: Traveling stats" and quick actions to insert figure references into the chat.
