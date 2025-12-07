@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { buildChartForQuestion } from '../_lib/chartHelper';
+import { getFiguresForReport } from '../_lib/figureExtractor';
 
 export const runtime = 'nodejs';
 
@@ -78,9 +79,37 @@ export async function POST(request) {
     let chunks = [];
     let usedStored = false;
     const wantsChart = /\b(chart|graph|visualiz(e|ation)|plot|bar|line|pie)\b/i.test(String(question || ''));
+    const wantsFigures = /\b(show|display|view|see|available|list).*\b(figure|graph|chart|visual|image|diagram)\b/i.test(String(question || ''));
 
     const supabase = getServerSupabase();
     if (supabase && reportId) {
+      // Check if user wants to see figures from the report
+      if (wantsFigures) {
+        try {
+          // Estimate page count from size or use a default
+          const { data: report } = await supabase
+            .from('reports')
+            .select('size_bytes')
+            .eq('id', reportId)
+            .single();
+
+          const estimatedPages = report?.size_bytes ? Math.ceil(report.size_bytes / 2048) : 10;
+          const figureResult = await getFiguresForReport(reportId, estimatedPages);
+
+          return json({
+            ok: true,
+            type: 'figures',
+            ...figureResult
+          });
+        } catch (figErr) {
+          console.error('Error fetching figures:', figErr);
+          return json({
+            ok: true,
+            answer: "I couldn't retrieve the figures from this report. Please try asking a specific question about the content instead."
+          });
+        }
+      }
+
       // Try load stored chunks first
       const { data: rows, error } = await supabase
         .from('report_chunks')

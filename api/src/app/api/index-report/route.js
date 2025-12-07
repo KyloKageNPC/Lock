@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { extractFiguresFromPDF } from '../_lib/figureExtractor.js';
 
 export const runtime = 'nodejs';
 
@@ -116,7 +117,20 @@ export async function POST(request) {
       if (error) throw error;
     }
 
-    return json({ ok: true, chunks: rows.length });
+    // Extract figures from PDF if applicable
+    let figuresExtracted = 0;
+    if (contentType?.includes('pdf')) {
+      try {
+        const figures = await extractFiguresFromPDF(buffer, reportId, name || 'report');
+        figuresExtracted = figures.length;
+        console.log(`Extracted ${figuresExtracted} figures from report ${reportId}`);
+      } catch (figErr) {
+        console.error('Figure extraction failed (non-fatal):', figErr);
+        // Don't fail the whole indexing if figure extraction fails
+      }
+    }
+
+    return json({ ok: true, chunks: rows.length, figures: figuresExtracted });
   } catch (err) {
     console.error('Index-report error:', err);
     return json({ error: 'Indexing failed', details: String(err?.message || err) }, 500);

@@ -3,6 +3,7 @@ import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { Send, Bot, User, MessageSquare, Trash2, X, FileText, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ChartMessage from './ChartMessage';
+import FigureMessage from './FigureMessage';
 
 export default function ChatInterface() {
   const { reportId } = useParams();
@@ -379,6 +380,20 @@ export default function ChatInterface() {
                 localStorage.setItem(localKey, JSON.stringify(payload));
                 assistantMessage.localChartKey = localKey;
               } catch {}
+            } else if (res.ok && data?.type === 'figures') {
+              // Handle figure response
+              assistantMessage = {
+                id: messages.length + 2,
+                type: 'figures',
+                content: {
+                  figures: data.figures || [],
+                  totalFigures: data.totalFigures || 0,
+                  shownFigures: data.shownFigures || 0,
+                  message: data.message || '',
+                  reportSize: data.reportSize || 'medium'
+                },
+                timestamp: new Date()
+              };
             } else {
               answerText = data?.answer ? data.answer : (data?.error ? `Error: ${data.error}` : answerText);
             }
@@ -580,7 +595,7 @@ export default function ChatInterface() {
                   )}
                 </div>
 
-                <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${message.type === 'assistant' ? 'bg-[#2a2a2a] text-white' : 'bg-[#00A67E] text-white'}`}>
+                <div className={`${message.type === 'figures' ? 'max-w-full' : 'max-w-[70%]'} rounded-2xl px-4 py-3 ${message.type === 'assistant' ? 'bg-[#2a2a2a] text-white' : 'bg-[#00A67E] text-white'}`}>
                   {message.type === 'chart' ? (
                     <>
                       <ChartMessage payload={message.content} />
@@ -588,6 +603,8 @@ export default function ChatInterface() {
                         <a href={buildChartLink(message)} target="_blank" rel="noreferrer" className="text-[#00A67E] hover:underline">Open chart in new tab</a>
                       </div>
                     </>
+                  ) : message.type === 'figures' ? (
+                    <FigureMessage figureData={message.content} />
                   ) : (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">
                       {message.content}
